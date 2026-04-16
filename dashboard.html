@@ -134,7 +134,7 @@ function renderSizeBubble(){
 
   const allDates=[...new Set(valid.map(d=>d.date.slice(0,7)))].sort();
 
-  new Chart(document.getElementById('c2'),{type:'bubble',
+  window._bubbleChart=new Chart(document.getElementById('c2'),{type:'bubble',
     data:{datasets},
     options:{
       responsive:true, maintainAspectRatio:false,
@@ -158,22 +158,45 @@ function renderSizeBubble(){
     }
   });
 
+  window._bubbleLookup={};
+  datasets.forEach((ds,di)=>{ds._meta.forEach((m,pi)=>{_bubbleLookup[m.name]={dsIdx:di,ptIdx:pi};});});
+
   const bigOnes=valid.filter(d=>parseFloat(d.size_gb)>=1).sort((a,b)=>parseFloat(b.size_gb)-parseFloat(a.size_gb));
   document.getElementById('bubbleTopList').innerHTML=`
-    <div style="color:var(--muted);font-size:0.82rem;margin-bottom:8px;">数据集规模 ≥ 1GB（共 ${bigOnes.length} 个，按大小降序）</div>
+    <div style="color:var(--muted);font-size:0.82rem;margin-bottom:8px;">数据集规模 ≥ 1GB（共 ${bigOnes.length} 个，悬停定位气泡，点击跳转链接）</div>
     <div style="display:flex;flex-wrap:wrap;gap:8px;">
       ${bigOnes.map((d,i)=>{
         const gb=parseFloat(d.size_gb);
         const dom=classifyDomain(d.domain);
         const color=DOM_COLORS[dom]||'#64748b';
         const sizeStr=gb>=1000?((gb/1000).toFixed(1)+' TB'):(gb>=100?Math.round(gb)+' GB':gb+' GB');
-        return `<div style="background:${color}15;border:1px solid ${color}33;border-radius:6px;padding:4px 10px;font-size:0.78rem;display:inline-flex;align-items:center;gap:5px;">
-          <span style="color:${color};font-weight:700;min-width:14px;text-align:right;">${i+1}</span>
-          <span style="color:var(--text);font-weight:600;">${d.name}</span>
-          <span style="color:var(--muted);font-size:0.72rem;">${sizeStr}</span>
-        </div>`;
+        const url=(d.website||d.paper||'').match(/https?:\/\/[^\s,\n]+/);
+        const href=url?url[0]:'';
+        return `<a ${href?'href="'+href+'" target="_blank"':''} class="bubble-card" data-name="${d.name}" style="--card-color:${color};" onmouseenter="highlightBubble('${d.name.replace(/'/g,"\\'")}')" onmouseleave="unhighlightBubble()">
+          <span class="bc-rank">${i+1}</span>
+          <span class="bc-name">${d.name}</span>
+          <span class="bc-size">${sizeStr}</span>
+        </a>`;
       }).join('')}
     </div>`;
+}
+
+function highlightBubble(name){
+  const chart=window._bubbleChart;
+  const info=window._bubbleLookup[name];
+  if(!chart||!info) return;
+  chart.setActiveElements([{datasetIndex:info.dsIdx,index:info.ptIdx}]);
+  chart.tooltip.setActiveElements([{datasetIndex:info.dsIdx,index:info.ptIdx}],{x:0,y:0});
+  chart.update('none');
+  const canvas=chart.canvas;
+  canvas.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function unhighlightBubble(){
+  const chart=window._bubbleChart;
+  if(!chart) return;
+  chart.setActiveElements([]);
+  chart.tooltip.setActiveElements([],{x:0,y:0});
+  chart.update('none');
 }
 
 function renderDomain(){
