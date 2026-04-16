@@ -49,7 +49,7 @@
 
   <h2 class="section-title">完整数据表</h2>
   <div class="table-controls" id="tableControls"></div>
-  <div class="table-wrap"><table id="dataTable"><thead></thead><tbody></tbody></table></div>
+  <div class="table-scroll-wrap"><table id="dataTable"><thead></thead><tbody></tbody></table></div>
 
   <footer>Robot Dataset Survey · 89 datasets (2018-2026) · <a href="https://github.com/jiangenhua/robot-dataset-survey">GitHub</a></footer>
 </div>
@@ -158,17 +158,19 @@ function renderSizeBubble(){
     }
   });
 
-  const top=valid.sort((a,b)=>parseFloat(b.size_gb)-parseFloat(a.size_gb)).slice(0,10);
+  const bigOnes=valid.filter(d=>parseFloat(d.size_gb)>=1).sort((a,b)=>parseFloat(b.size_gb)-parseFloat(a.size_gb));
   document.getElementById('bubbleTopList').innerHTML=`
-    <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
-      ${top.map((d,i)=>{
+    <div style="color:var(--muted);font-size:0.82rem;margin-bottom:8px;">数据集规模 ≥ 1GB（共 ${bigOnes.length} 个，按大小降序）</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      ${bigOnes.map((d,i)=>{
         const gb=parseFloat(d.size_gb);
         const dom=classifyDomain(d.domain);
         const color=DOM_COLORS[dom]||'#64748b';
-        return `<div style="background:${color}18;border:1px solid ${color}44;border-radius:8px;padding:6px 12px;font-size:0.8rem;display:flex;align-items:center;gap:6px;">
-          <span style="color:${color};font-weight:700;font-size:0.75rem;">#${i+1}</span>
+        const sizeStr=gb>=1000?((gb/1000).toFixed(1)+' TB'):(gb>=100?Math.round(gb)+' GB':gb+' GB');
+        return `<div style="background:${color}15;border:1px solid ${color}33;border-radius:6px;padding:4px 10px;font-size:0.78rem;display:inline-flex;align-items:center;gap:5px;">
+          <span style="color:${color};font-weight:700;min-width:14px;text-align:right;">${i+1}</span>
           <span style="color:var(--text);font-weight:600;">${d.name}</span>
-          <span style="color:var(--muted);font-size:0.75rem;">${gb>=1000?((gb/1000).toFixed(1)+'TB'):(gb+'GB')} · ${d.date.slice(0,7)}</span>
+          <span style="color:var(--muted);font-size:0.72rem;">${sizeStr}</span>
         </div>`;
       }).join('')}
     </div>`;

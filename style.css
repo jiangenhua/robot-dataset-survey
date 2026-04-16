@@ -31,8 +31,10 @@ h1{font-size:2rem;font-weight:700;background:linear-gradient(135deg,#6366f1,#22d
 .inline-chart{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;margin:16px 0}
 .inline-chart canvas{max-height:280px}
 .table-wrap{overflow-x:auto;margin-bottom:32px}
+.table-scroll-wrap{overflow:auto;max-height:700px;margin-bottom:32px;border:1px solid var(--border);border-radius:8px;position:relative}
 table{width:100%;border-collapse:collapse;font-size:0.82rem}
-th{background:var(--accent);color:#fff;padding:10px 8px;text-align:left;position:sticky;top:48px;white-space:nowrap;cursor:pointer;font-size:0.8rem}
+th{background:var(--accent);color:#fff;padding:10px 8px;text-align:left;white-space:nowrap;cursor:pointer;font-size:0.8rem}
+.table-scroll-wrap th{position:sticky;top:0;z-index:10}
 th:hover{background:#4f46e5}
 td{padding:8px;border-bottom:1px solid var(--border);vertical-align:top;max-width:200px;overflow:hidden;text-overflow:ellipsis}
 tr:hover td{background:rgba(99,102,241,0.06)}
@@ -56,7 +58,7 @@ footer a{color:var(--accent2);text-decoration:none}
 .col-checks label{display:flex;align-items:center;gap:4px;font-size:0.8rem;color:var(--muted);cursor:pointer;padding:3px 8px;border-radius:4px;border:1px solid var(--border);transition:all 0.15s}
 .col-checks label:hover{border-color:var(--accent);color:var(--text)}
 .col-checks input[type=checkbox]{accent-color:var(--accent)}
-tr.filter-row th{background:var(--card);padding:4px;position:sticky;top:80px;z-index:9}
+tr.filter-row th{background:var(--card);padding:4px;position:sticky;top:34px;z-index:9}
 @media(max-width:768px){
   .charts-grid{grid-template-columns:1fr}
   .stats-row{grid-template-columns:repeat(2,1fr)}
