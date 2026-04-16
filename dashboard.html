@@ -27,8 +27,9 @@
 
   <!-- Bubble chart: full width, tall -->
   <div class="chart-card chart-full" style="margin-bottom:20px;">
-    <h3>数据规模分布 — 时间 × 大小 × Domain（点击气泡查看详情）</h3>
-    <div style="height:480px;position:relative;"><canvas id="c2"></canvas></div>
+    <h3>数据规模分布 — 时间 × 大小 × Domain（鼠标悬停气泡查看详情）</h3>
+    <div style="height:450px;position:relative;"><canvas id="c2"></canvas></div>
+    <div id="bubbleTopList" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);"></div>
   </div>
 
   <div class="charts-grid">
@@ -117,45 +118,60 @@ function renderSizeBubble(){
     const dom=classifyDomain(d.domain);
     if(!domGroups[dom]) domGroups[dom]=[];
     const gb=parseFloat(d.size_gb);
-    domGroups[dom].push({x:d.date,y:gb,r:Math.min(Math.sqrt(gb)*1.2+4,40),name:d.name,gb});
+    domGroups[dom].push({x:d.date.slice(0,7),y:gb,r:Math.min(Math.sqrt(gb)*1.0+3,35),name:d.name,gb,inst:d.institution});
   });
 
   const datasets=Object.entries(domGroups).map(([dom,pts])=>({
     label:dom,
     data:pts.map(p=>({x:p.x,y:p.y,r:p.r})),
-    backgroundColor:(DOM_COLORS[dom]||'#64748b')+'88',
+    backgroundColor:(DOM_COLORS[dom]||'#64748b')+'77',
     borderColor:(DOM_COLORS[dom]||'#64748b'),
-    borderWidth:1,
-    _names:pts.map(p=>p.name),
-    _gbs:pts.map(p=>p.gb),
+    borderWidth:1.5,
+    hoverBackgroundColor:(DOM_COLORS[dom]||'#64748b')+'cc',
+    hoverBorderWidth:2,
+    _meta:pts,
   }));
 
-  const allDates=[...new Set(valid.map(d=>d.date))].sort();
+  const allDates=[...new Set(valid.map(d=>d.date.slice(0,7)))].sort();
 
   new Chart(document.getElementById('c2'),{type:'bubble',
     data:{datasets},
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{
-        legend:{labels:{color:'#e1e4ea',font:{size:11}},position:'top'},
-        datalabels:{
-          display:function(ctx){return ctx.dataset._gbs[ctx.dataIndex]>=40;},
-          formatter:function(_,ctx){const i=ctx.dataIndex;return ctx.dataset._names[i]+'\n'+ctx.dataset._gbs[i]+'GB';},
-          color:'#e1e4ea',font:{size:9,weight:'bold'},align:'top',offset:4,
-          backgroundColor:'rgba(15,17,23,0.7)',borderRadius:4,padding:{top:2,bottom:2,left:4,right:4},
-        },
+        legend:{labels:{color:'#e1e4ea',font:{size:11},usePointStyle:true,pointStyle:'circle'},position:'top'},
+        datalabels:{display:false},
         tooltip:{
+          backgroundColor:'rgba(26,29,40,0.95)',
+          titleColor:'#22d3ee',bodyColor:'#e1e4ea',borderColor:'#2a2d3a',borderWidth:1,
+          padding:10,cornerRadius:8,
           callbacks:{
-            label:function(ctx){const i=ctx.dataIndex;const ds=ctx.dataset;return `${ds._names[i]}: ${ds._gbs[i]} GB (${ds.label})`;}
+            title:function(items){const i=items[0].dataIndex;const ds=items[0].dataset;return ds._meta[i].name;},
+            label:function(ctx){const m=ctx.dataset._meta[ctx.dataIndex];return[`Size: ${m.gb.toLocaleString()} GB`,`Date: ${m.x}`,`Domain: ${ctx.dataset.label}`,`Institution: ${(m.inst||'').slice(0,40)}`];}
           }
         }
       },
       scales:{
-        x:{type:'category',labels:allDates,ticks:{color:'#8b8fa3',maxRotation:45,font:{size:10}},grid:{color:'#2a2d3a'},title:{display:true,text:'发布日期',color:'#8b8fa3'}},
-        y:{type:'logarithmic',min:0.01,ticks:{color:'#8b8fa3',callback:v=>{if([0.01,0.1,1,10,100,1000].includes(v))return v+'GB';return'';}},grid:{color:'#2a2d3a'},title:{display:true,text:'File Size (GB, log)',color:'#8b8fa3'}}
+        x:{type:'category',labels:allDates,ticks:{color:'#8b8fa3',maxRotation:50,font:{size:9},autoSkip:true,maxTicksLimit:25},grid:{color:'#1e2130'},title:{display:true,text:'发布日期',color:'#6b7080',font:{size:11}}},
+        y:{type:'logarithmic',min:0.008,ticks:{color:'#8b8fa3',font:{size:10},callback:v=>{if([0.01,0.1,1,10,100,1000].includes(v))return v+' GB';return'';}},grid:{color:'#1e2130'},title:{display:true,text:'File Size (GB)',color:'#6b7080',font:{size:11}}}
       }
     }
   });
+
+  const top=valid.sort((a,b)=>parseFloat(b.size_gb)-parseFloat(a.size_gb)).slice(0,10);
+  document.getElementById('bubbleTopList').innerHTML=`
+    <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
+      ${top.map((d,i)=>{
+        const gb=parseFloat(d.size_gb);
+        const dom=classifyDomain(d.domain);
+        const color=DOM_COLORS[dom]||'#64748b';
+        return `<div style="background:${color}18;border:1px solid ${color}44;border-radius:8px;padding:6px 12px;font-size:0.8rem;display:flex;align-items:center;gap:6px;">
+          <span style="color:${color};font-weight:700;font-size:0.75rem;">#${i+1}</span>
+          <span style="color:var(--text);font-weight:600;">${d.name}</span>
+          <span style="color:var(--muted);font-size:0.75rem;">${gb>=1000?((gb/1000).toFixed(1)+'TB'):(gb+'GB')} · ${d.date.slice(0,7)}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
 }
 
 function renderDomain(){
