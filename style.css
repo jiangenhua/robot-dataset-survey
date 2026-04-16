@@ -49,11 +49,11 @@ td a{color:var(--accent2);text-decoration:none}
 footer{text-align:center;color:var(--muted);font-size:0.8rem;padding:24px 0;border-top:1px solid var(--border)}
 footer a{color:var(--accent2);text-decoration:none}
 .chart-full{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
-.bubble-card{display:inline-flex;align-items:center;gap:5px;background:color-mix(in srgb,var(--card-color) 8%,transparent);border:1px solid color-mix(in srgb,var(--card-color) 20%,transparent);border-radius:6px;padding:4px 10px;font-size:0.78rem;text-decoration:none;cursor:pointer;transition:all 0.2s}
-.bubble-card:hover{background:color-mix(in srgb,var(--card-color) 25%,transparent);border-color:var(--card-color);transform:translateY(-1px);box-shadow:0 2px 12px color-mix(in srgb,var(--card-color) 30%,transparent)}
-.bc-rank{color:var(--card-color);font-weight:700;min-width:14px;text-align:right;font-size:0.72rem}
-.bc-name{color:var(--text);font-weight:600}
-.bc-size{color:var(--muted);font-size:0.72rem}
+.bubble-card{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:4px 10px;font-size:0.78rem;text-decoration:none;cursor:pointer;transition:all 0.2s}
+.bubble-card:hover{transform:translateY(-1px)}
+.bc-rank{font-weight:700;min-width:14px;text-align:right;font-size:0.72rem}
+.bc-name{font-weight:600}
+.bc-size{font-size:0.72rem}
 .chart-full h3{font-size:0.95rem;margin-bottom:12px;color:var(--accent2)}
 .table-controls{margin-bottom:16px}
 .col-selector{margin:8px 0}

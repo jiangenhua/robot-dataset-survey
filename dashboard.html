@@ -172,10 +172,10 @@ function renderSizeBubble(){
         const sizeStr=gb>=1000?((gb/1000).toFixed(1)+' TB'):(gb>=100?Math.round(gb)+' GB':gb+' GB');
         const url=(d.website||d.paper||'').match(/https?:\/\/[^\s,\n]+/);
         const href=url?url[0]:'';
-        return `<a ${href?'href="'+href+'" target="_blank"':''} class="bubble-card" data-name="${d.name}" style="--card-color:${color};" onmouseenter="highlightBubble('${d.name.replace(/'/g,"\\'")}')" onmouseleave="unhighlightBubble()">
-          <span class="bc-rank">${i+1}</span>
-          <span class="bc-name">${d.name}</span>
-          <span class="bc-size">${sizeStr}</span>
+        return `<a ${href?'href="'+href+'" target="_blank"':''} class="bubble-card" data-name="${d.name}" style="background:${color}15;border:1px solid ${color}33;" onmouseenter="this.style.background='${color}35';this.style.borderColor='${color}';highlightBubble('${d.name.replace(/'/g,"\\'")}')" onmouseleave="this.style.background='${color}15';this.style.borderColor='${color}33';unhighlightBubble()">
+          <span class="bc-rank" style="color:${color}">${i+1}</span>
+          <span class="bc-name" style="color:var(--text)">${d.name}</span>
+          <span class="bc-size" style="color:var(--muted)">${sizeStr}</span>
         </a>`;
       }).join('')}
     </div>`;
