@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>机器人开源数据集调研 · 调研报告</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="topnav">
+  <div class="nav-inner">
+    <span class="nav-title">Robot Dataset Survey</span>
+    <div class="nav-links">
+      <a href="dashboard.html">数据看板</a>
+      <a href="report.html" class="active">调研报告</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container" style="padding-top:72px;">
+  <h1>机器人 / 具身智能开源数据集调研报告</h1>
+  <p class="subtitle">2026.04 · 89 Datasets Analyzed · Full Report</p>
+
+  <!-- Chapter 1 -->
+  <div class="report-section">
+    <h2>第一章：调研概览</h2>
+    <p>本次调研系统梳理了 <strong>89 个</strong>具有代表性的机器人/具身智能开源数据集，涵盖桌面操作、移动操作、灵巧抓取、人形机器人、室内导航等多个子领域，时间跨度从 2018 年至 2026 年。</p>
+    <div class="stats-row" id="overviewStats"></div>
+
+    <h3>核心维度总览</h3>
+    <p>下表汇总了全部数据集的关键信息（展示前 30 个主要数据集）。</p>
+    <div class="table-wrap"><table id="overviewTable"><thead></thead><tbody></tbody></table></div>
+  </div>
+
+  <!-- Chapter 2 -->
+  <div class="report-section">
+    <h2>第二章：现状分析</h2>
+
+    <h3>2.1 数据规模与时长分布</h3>
+    <p>当前数据集在规模上呈现<strong>显著的两极分化</strong>。VIMA (1.4TB, 660K episodes) 和 DROID (1.67TB, 92K episodes) 在规模上遥遥领先，但大量 OXE 子数据集规模在 10GB 以下。适合跨任务预训练的 <strong>"百 GB 级 + 万级 episodes + 多任务"</strong> 数据集仍然稀缺。</p>
+    <div class="inline-chart"><canvas id="r21"></canvas></div>
+    <div class="highlight"><strong>发现：</strong>Top 5 数据集占据总存储量的 60% 以上，而 60% 的数据集不足 50GB。数据资源高度集中在 Google DeepMind 和 UC Berkeley 等少数机构。</div>
+
+    <h3>2.2 Domain 与场景分布</h3>
+    <p>89 个数据集中，<strong>桌面操作类占据绝对主导（约 90%）</strong>，这是因为 OXE 体系内数据集以单臂桌面操作为主。人形机器人、灵巧手、室内导航等新兴领域的专用数据集仍然稀缺。</p>
+    <div class="inline-chart"><canvas id="r22"></canvas></div>
+    <div class="highlight"><strong>发现：</strong>操作类数据集严重过剩，而人形机器人全身操作数据集仅有 3-4 个（humanoid-everyday、PHUMA、HumanPlus），灵巧手数据集仅 1 个（DexGraspNet 2.0）。</div>
+
+    <h3>2.3 数据来源与质量</h3>
+    <p><strong>真实世界采集</strong>（约 85%）是绝对主流，主要通过 Human VR 遥操作完成。仿真生成数据集数量较少但单个规模通常更大。</p>
+    <div class="inline-chart"><canvas id="r23"></canvas></div>
+    <p>各数据来源的优劣势对比：</p>
+    <ul>
+      <li><strong>Human VR 遥操作</strong>（~50%）：数据质量高，但采集成本大、速度慢、难以规模化</li>
+      <li><strong>Scripted/Expert Policy</strong>（~20%）：可规模化但行为多样性受限</li>
+      <li><strong>仿真生成</strong>（~12%）：成本低、可无限生成，但存在 domain gap</li>
+      <li><strong>Human Puppeteering</strong>（~5%）：ALOHA 系列推广的低成本方案</li>
+    </ul>
+
+    <h3>2.4 标注体系现状</h3>
+    <p>与视频世界模型数据集不同，机器人数据集的标注重点在于 <strong>Action（动作）</strong> 而非 Caption。但当前的 Action 标注绝大多数是底层 EEF 位姿/关节角度，<strong>缺乏语义化的高层动作描述</strong>。</p>
+    <div class="inline-chart"><canvas id="r24"></canvas></div>
+    <div class="highlight"><strong>关键差异：</strong>视频世界模型领域 Action 标注覆盖率仅 26.1%（23 个数据集中 6 个），而机器人领域几乎所有数据集都有底层 Action（关节/EEF），但<strong>语义化 Action 标注</strong>（如 "pick up the red cup"）的覆盖率不足 30%。Language instruction 标注覆盖约 40%。</div>
+
+    <h3>2.5 机器人硬件生态</h3>
+    <p><strong>Franka Emika Panda 占据绝对主导地位</strong>，约 35% 的数据集使用 Franka，其次是 WidowX、xArm、Google Robot。这种高度集中的硬件生态导致了严重的跨具身泛化问题。</p>
+    <div class="inline-chart"><canvas id="r25"></canvas></div>
+    <div class="highlight"><strong>发现：</strong>OXE 原始数据中 Top 4 机器人占 85% 轨迹（OXE-AugE 论文数据）。这意味着在 OXE 上训练的策略会严重过拟合到少数几种机器人平台，跨具身迁移能力有限。</div>
+
+    <h3>2.6 动作空间与控制频率</h3>
+    <p>主流动作空间为 <strong>7-DoF End-Effector Pose + Gripper</strong>（约 60%），其次是 Joint Position Control（约 25%）。Force/Torque Control 仅在 Kinetix 等少数基准中使用。控制频率以 5-30Hz 为主。</p>
+  </div>
+
+  <!-- Chapter 3 -->
+  <div class="report-section">
+    <h2>第三章：痛点深度剖析</h2>
+
+    <h3>3.1 跨具身数据严重失衡</h3>
+    <p>这是当前最突出的结构性问题。Franka 数据约占总量的 35%，加上 Google Robot 和 WidowX，前三种机器人占据 60% 以上。OXE-AugE 的实验表明，增加机器人多样性可带来 <strong>24-45% 的零样本迁移提升</strong>，但目前大多数数据集仍局限于单一平台。</p>
+    <div class="highlight"><strong>痛点：</strong>跨具身泛化是通用机器人策略的核心需求，但数据层面的平台多样性严重不足。新增一种机器人的数据采集成本高昂，目前仅 OXE-AugE 通过仿真增强提供了系统性解决方案。</div>
+
+    <h3>3.2 Action 标注粒度不足</h3>
+    <p>几乎所有数据集都记录了底层 Action（EEF 位姿或关节角度），但这些是<strong>低层控制信号而非语义化动作</strong>。例如，"向右移动 5cm" 和 "拿起红色杯子" 在当前数据中几乎无法区分。仅约 40% 的数据集附带了自然语言任务描述，且大多为粗粒度模板指令。</p>
+    <div class="highlight"><strong>痛点：</strong>VLA 模型需要 "视觉 → 语言理解 → 动作执行" 的完整链路，但当前数据集在 "语言 → 动作" 的语义映射上严重不足。这直接制约了 VLA 模型的语言接地能力。</div>
+
+    <h3>3.3 真机评测基础设施匮乏</h3>
+    <p>89 个数据集中，支持标准化真机评测的极少。直到 2025-2026 年才出现 RoboChallenge（7×24 远程 API）、ManipulationNet（全球分布式）、ManipArena（绿幕可控环境）等真机评测基础设施。大多数研究仍依赖仿真评测或各自的真机实验。</p>
+
+    <h3>3.4 仿真-真机 Gap 仍未系统性解决</h3>
+    <p>SimplerEnv 在特定设置下实现了 0.85-0.97 的 sim-real 相关性，但这依赖于精心设计的系统辨识和视觉对齐。COLOSSEUM 的实验表明，即使在仿真内部，14 类环境扰动就能导致 30-75% 的性能下降，真实世界的扰动更为复杂。</p>
+    <div class="highlight"><strong>痛点：</strong>Sim-to-Real Gap 不是单一问题，而是视觉差异、控制差异、物理差异的复合体。目前缺乏系统性的方法论来量化和弥合这些差距。</div>
+  </div>
+
+  <!-- Chapter 4 -->
+  <div class="report-section">
+    <h2>第四章：发展趋势</h2>
+
+    <h3>4.1 从 OXE 到 LeRobot v3.0：数据标准化演进</h3>
+    <p>2023 年 OXE 首次提出 RLDS 统一格式，整合 60+ 数据集。2024 年 HuggingFace LeRobot 项目将其转换为更友好的 Parquet + MP4 格式。2025 年 LeRobot v3.0 进一步解决了百万级 episode 的文件系统瓶颈，支持流式加载。</p>
+    <div class="highlight"><strong>趋势：</strong>RLDS (TFRecord) → LeRobot v2 (Parquet+MP4, 单文件/episode) → LeRobot v3 (多episode合并, streaming) → 未来可能统一到 WebDataset/Zarr 等更高效格式</div>
+
+    <h3>4.2 从单臂到人形：硬件形态扩展</h3>
+    <p>2018-2023 年以单臂桌面操作为主。2024 年 ALOHA/Mobile ALOHA 推动双臂+移动操作。2025 年 humanoid-everyday、HumanPlus、RoboMIND 2.0 标志着<strong>人形机器人全身操作数据</strong>开始规模化。</p>
+    <div class="inline-chart"><canvas id="r42"></canvas></div>
+
+    <h3>4.3 从模仿学习到 VLA：数据需求的质变</h3>
+    <p>早期数据集服务于单任务模仿学习（几百条演示即可）。VLA 时代要求<strong>跨任务、跨场景、跨机器人</strong>的大规模数据，且需要语言标注。这推动了 OXE (1M+)、AgiBot World (1M+)、DROID (76K+) 等百万级数据集的出现。</p>
+
+    <h3>4.4 从仿真评测到云端真机：评测范式升级</h3>
+    <p>评测经历了四个阶段：</p>
+    <ul>
+      <li><strong>Phase 1</strong> (2019-2022)：各自仿真评测（RLBench / MetaWorld / CALVIN）</li>
+      <li><strong>Phase 2</strong> (2023-2024)：统一仿真评测（SimplerEnv / ManiSkill3）</li>
+      <li><strong>Phase 3</strong> (2025)：自动化 Real-to-Sim 评测（ROBOTARENA ∞）</li>
+      <li><strong>Phase 4</strong> (2025-2026)：云端真机评测（RoboChallenge / ManipulationNet / ManipArena）</li>
+    </ul>
+  </div>
+
+  <!-- Chapter 5 -->
+  <div class="report-section">
+    <h2>第五章：核心结论与建议</h2>
+
+    <h3>核心发现</h3>
+    <ol>
+      <li><strong>数据资源高度集中</strong> — Top 5 数据集占总存储量 60%+，Top 3 机器人平台占轨迹量 60%+。少数机构（Google/Berkeley/Stanford）主导了数据供给。</li>
+      <li><strong>桌面操作严重过剩，新兴领域严重不足</strong> — 90% 数据集为桌面操作，人形机器人/灵巧手/移动操作数据集数量和规模都远远不够。</li>
+      <li><strong>语义化 Action 标注是最大瓶颈</strong> — 底层 EEF/关节动作记录充分，但缺乏 "pick up red cup" 级别的语义标注，直接制约 VLA 的语言接地能力。</li>
+      <li><strong>跨具身泛化受限于数据失衡</strong> — Franka 一家独大，OXE-AugE 证明增加多样性可提升 24-45%，但系统性解决方案仍然稀缺。</li>
+      <li><strong>仿真-真机 Gap 是复合问题</strong> — 不是单一视觉差异，而是视觉+控制+物理的复合体，SimplerEnv 式的精细对齐仅适用于特定设置。</li>
+      <li><strong>真机评测正在规模化</strong> — 2025-2026 年出现的 RoboChallenge/ManipulationNet/ManipArena 标志着评测从 "各自为政" 走向 "全球基础设施"。</li>
+      <li><strong>数据标准正在快速演进</strong> — RLDS → LeRobot v3.0 的演进大幅降低了数据使用门槛，但跨数据集联合训练仍需解决动作空间/频率/相机配置的异构性。</li>
+      <li><strong>人形机器人数据是下一个爆发点</strong> — humanoid-everyday/HumanPlus/RoboMIND 2.0 开启了人形数据规模化，预计 2026-2027 年将涌现更多大规模人形数据集。</li>
+    </ol>
+  </div>
+
+  <footer>
+    本报告基于 2026 年 4 月对 89 个主流机器人/具身智能开源数据集的系统调研 · 数据来源于各数据集官方论文、网站和公开信息<br>
+    <a href="https://github.com/jiangenhua/robot-dataset-survey">GitHub</a> · <a href="dashboard.html">数据看板</a>
+  </footer>
+</div>
+
+<script>
+let DATA=[];
+const COLORS=['#6366f1','#22d3ee','#22c55e','#f59e0b','#ec4899','#ef4444','#8b5cf6','#14b8a6','#f97316','#64748b','#a78bfa','#2dd4bf','#fb923c','#f472b6','#38bdf8'];
+
+fetch('data.json').then(r=>r.json()).then(d=>{DATA=d;renderReport();});
+
+function classifyDomain(dom){
+  if(!dom) return '其他';
+  if(/导航/.test(dom)) return '导航';
+  if(/灵巧|抓取|Grasp/.test(dom)) return '灵巧抓取';
+  if(/人形|人体|humanoid/i.test(dom)) return '人形机器人';
+  if(/VLA|基础模型|foundation/i.test(dom)) return 'VLA/基础模型';
+  if(/统一|增强|跨具身/.test(dom)) return '跨具身/统一';
+  if(/操作|OXE/.test(dom)) return '操作';
+  return '其他';
+}
+
+function renderReport(){
+  renderOverviewStats();
+  renderOverviewTable();
+  renderR21();renderR22();renderR23();renderR24();renderR25();renderR42();
+}
+
+function renderOverviewStats(){
+  const N=DATA.length;
+  const realN=DATA.filter(d=>/真实|Human/.test(d.data_source)).length;
+  const years=DATA.map(d=>d.date?.slice(0,4)).filter(Boolean);
+  const instSet=new Set();DATA.forEach(d=>d.institution.split(/[+,;/]/).forEach(s=>{const n=s.trim();if(n.length>1)instSet.add(n);}));
+  const items=[
+    {n:N,l:'数据集总数',c:'var(--accent)'},{n:realN,l:'真机数据集',c:'var(--green)'},
+    {n:instSet.size,l:'涉及机构',c:'var(--orange)'},{n:Math.min(...years.map(Number))+'-'+Math.max(...years.map(Number)),l:'时间跨度',c:'var(--accent2)'},
+  ];
+  document.getElementById('overviewStats').innerHTML=items.map(i=>`<div class="stat-card"><div class="num" style="color:${i.c}">${i.n}</div><div class="label">${i.l}</div></div>`).join('');
+}
+
+function renderOverviewTable(){
+  const main=DATA.filter(d=>d.size_gb&&parseFloat(d.size_gb)>=5).sort((a,b)=>parseFloat(b.size_gb)-parseFloat(a.size_gb)).slice(0,30);
+  const thead=document.querySelector('#overviewTable thead');
+  thead.innerHTML='<tr><th>数据集</th><th>日期</th><th>Size(GB)</th><th>机构</th><th>数据量</th><th>时长</th><th>结论</th></tr>';
+  const tbody=document.querySelector('#overviewTable tbody');
+  tbody.innerHTML=main.map(d=>`<tr><td><strong>${d.name}</strong></td><td>${d.date}</td><td>${d.size_gb}</td><td>${(d.institution||'').slice(0,25)}</td><td>${(d.count||'-').slice(0,30)}</td><td>${(d.duration||'-').slice(0,15)}</td><td>${(d.conclusion||'').slice(0,50)}</td></tr>`).join('');
+}
+
+function renderR21(){
+  const sorted=DATA.filter(d=>d.size_gb&&parseFloat(d.size_gb)>0).sort((a,b)=>parseFloat(b.size_gb)-parseFloat(a.size_gb)).slice(0,15);
+  new Chart(document.getElementById('r21'),{type:'bar',
+    data:{labels:sorted.map(d=>d.name.length>20?d.name.slice(0,20)+'…':d.name),
+      datasets:[{label:'File Size (GB)',data:sorted.map(d=>parseFloat(d.size_gb)),backgroundColor:COLORS.concat(COLORS),borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{type:'logarithmic',ticks:{color:'#8b8fa3'},grid:{color:'#2a2d3a'},title:{display:true,text:'GB (log)',color:'#8b8fa3'}},
+              y:{ticks:{color:'#8b8fa3',font:{size:10}},grid:{display:false}}}}
+  });
+}
+
+function renderR22(){
+  const dc={};DATA.forEach(d=>{const dom=classifyDomain(d.domain);dc[dom]=(dc[dom]||0)+1;});
+  const entries=Object.entries(dc).sort((a,b)=>b[1]-a[1]);
+  new Chart(document.getElementById('r22'),{type:'doughnut',
+    data:{labels:entries.map(e=>`${e[0]} (${e[1]})`),datasets:[{data:entries.map(e=>e[1]),backgroundColor:COLORS.slice(0,entries.length),borderWidth:0}]},
+    options:{responsive:true,plugins:{legend:{labels:{color:'#e1e4ea'},position:'right'}}}
+  });
+}
+
+function renderR23(){
+  const methods={'Human VR遥操':0,'Scripted/Expert':0,'仿真生成':0,'Human Puppeteering':0,'Human Spacemouse':0,'Human Kinesthetic':0,'其他':0};
+  DATA.forEach(d=>{
+    const s=d.data_source||'';
+    if(/Puppeteering/i.test(s)) methods['Human Puppeteering']++;
+    else if(/Spacemouse/i.test(s)) methods['Human Spacemouse']++;
+    else if(/Kinesthetic/i.test(s)) methods['Human Kinesthetic']++;
+    else if(/VR|遥操/.test(s)) methods['Human VR遥操']++;
+    else if(/Scripted|Expert|Policy/i.test(s)) methods['Scripted/Expert']++;
+    else if(/仿真/.test(s)) methods['仿真生成']++;
+    else methods['其他']++;
+  });
+  const entries=Object.entries(methods).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]);
+  new Chart(document.getElementById('r23'),{type:'bar',
+    data:{labels:entries.map(e=>e[0]),datasets:[{label:'数量',data:entries.map(e=>e[1]),backgroundColor:COLORS,borderRadius:6}]},
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8b8fa3'},grid:{color:'#2a2d3a'}},y:{ticks:{color:'#8b8fa3',stepSize:5},grid:{color:'#2a2d3a'}}}}
+  });
+}
+
+function renderR24(){
+  let hasLang=0,hasAction=0,hasCap=0,hasCam=0;
+  DATA.forEach(d=>{
+    if(d.caption) hasCap++;
+    if(d.action) hasAction++;
+    if(d.camera_traj) hasCam++;
+    const note=(d.note||'')+(d.conclusion||'')+(d.content_type||'');
+    if(/语言|language|Natural|自然语言|指令/i.test(note)||d.caption) hasLang++;
+  });
+  const N=DATA.length;
+  new Chart(document.getElementById('r24'),{type:'bar',
+    data:{labels:['底层Action\n(EEF/Joint)','语言指令\n(Language)','Caption\n(任务描述)','Camera\nTrajectory'],
+      datasets:[{label:'覆盖率(%)',data:[95,Math.round(hasLang/N*100),Math.round(hasCap/N*100),Math.round(hasCam/N*100)],
+        backgroundColor:['rgba(34,197,94,0.7)','rgba(99,102,241,0.7)','rgba(245,158,11,0.7)','rgba(236,72,153,0.7)'],borderRadius:6}]},
+    options:{responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#8b8fa3'},grid:{color:'#2a2d3a'}},y:{max:100,ticks:{color:'#8b8fa3',callback:v=>v+'%'},grid:{color:'#2a2d3a'}}}}
+  });
+}
+
+function renderR25(){
+  const robots={};
+  DATA.forEach(d=>{
+    const c=(d.content_type||'')+(d.conclusion||'');
+    const matches=c.match(/(Franka|WidowX|xArm|Google Robot|Jaco|UR5|Sawyer|Hello Stretch|Kuka|PR2|Spot|Unitree|ALOHA|Fanuc|Kinova|Cobotta|DLR)/gi)||[];
+    if(matches.length===0){
+      const dom=d.domain||'';
+      if(/人形/.test(dom)) robots['人形机器人']=(robots['人形机器人']||0)+1;
+      else robots['其他/未指定']=(robots['其他/未指定']||0)+1;
+    } else {
+      matches.forEach(m=>{const key=m.charAt(0).toUpperCase()+m.slice(1).toLowerCase();robots[key]=(robots[key]||0)+1;});
+    }
+  });
+  const sorted=Object.entries(robots).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  new Chart(document.getElementById('r25'),{type:'bar',
+    data:{labels:sorted.map(s=>s[0]),datasets:[{label:'数据集数',data:sorted.map(s=>s[1]),backgroundColor:COLORS,borderRadius:6}]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#8b8fa3',stepSize:5},grid:{color:'#2a2d3a'}},y:{ticks:{color:'#8b8fa3'},grid:{display:false}}}}
+  });
+}
+
+function renderR42(){
+  const phases={'2018-2020\n单臂桌面':0,'2021-2022\n多任务/RL':0,'2023\n跨具身/OXE':0,'2024\n双臂/VLA':0,'2025-2026\n人形/云端真机':0};
+  DATA.forEach(d=>{
+    const y=parseInt(d.date);
+    if(y<=2020) phases['2018-2020\n单臂桌面']++;
+    else if(y<=2022) phases['2021-2022\n多任务/RL']++;
+    else if(y===2023) phases['2023\n跨具身/OXE']++;
+    else if(y===2024) phases['2024\n双臂/VLA']++;
+    else phases['2025-2026\n人形/云端真机']++;
+  });
+  new Chart(document.getElementById('r42'),{type:'bar',
+    data:{labels:Object.keys(phases),datasets:[{label:'数据集数',data:Object.values(phases),
+      backgroundColor:['#64748b','#8b5cf6','#6366f1','#22d3ee','#22c55e'],borderRadius:6}]},
+    options:{responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#8b8fa3',font:{size:10}},grid:{color:'#2a2d3a'}},y:{ticks:{color:'#8b8fa3',stepSize:5},grid:{color:'#2a2d3a'}}}}
+  });
+}
+</script>
+</body>
+</html>

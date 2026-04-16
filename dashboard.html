@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>机器人开源数据集调研 · 数据看板</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="topnav">
+  <div class="nav-inner">
+    <span class="nav-title">Robot Dataset Survey</span>
+    <div class="nav-links">
+      <a href="dashboard.html" class="active">数据看板</a>
+      <a href="report.html">调研报告</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container" style="padding-top:72px;">
+  <h1>机器人 / 具身智能开源数据集调研</h1>
+  <p class="subtitle">Interactive Dashboard · 89 Datasets · 2018-2026</p>
+
+  <div class="stats-row" id="stats"></div>
+
+  <div class="charts-grid">
+    <div class="chart-card"><h3>发布年份分布</h3><canvas id="c1"></canvas></div>
+    <div class="chart-card"><h3>数据规模分布 (File Size GB)</h3><canvas id="c2"></canvas></div>
+    <div class="chart-card"><h3>Domain 领域分布</h3><canvas id="c3"></canvas></div>
+    <div class="chart-card"><h3>数据来源 (真实 vs 仿真)</h3><canvas id="c4"></canvas></div>
+    <div class="chart-card"><h3>机构贡献 Top 15</h3><canvas id="c5"></canvas></div>
+    <div class="chart-card"><h3>数据类型分布</h3><canvas id="c6"></canvas></div>
+    <div class="chart-card"><h3>标注体系覆盖率</h3><canvas id="c7"></canvas></div>
+    <div class="chart-card"><h3>数据集规模 Top 20 (GB)</h3><canvas id="c8"></canvas></div>
+  </div>
+
+  <h2 class="section-title">完整数据表</h2>
+  <div class="filter-bar" id="filters"></div>
+  <div class="table-wrap"><table id="dataTable"><thead></thead><tbody></tbody></table></div>
+
+  <footer>Robot Dataset Survey · 89 datasets (2018-2026) · <a href="https://github.com/jiangenhua/robot-dataset-survey">GitHub</a></footer>
+</div>
+
+<script>
+let DATA=[];
+const COLORS=['#6366f1','#22d3ee','#22c55e','#f59e0b','#ec4899','#ef4444','#8b5cf6','#14b8a6','#f97316','#64748b','#a78bfa','#2dd4bf','#fb923c','#f472b6','#38bdf8'];
+
+fetch('data.json').then(r=>r.json()).then(d=>{DATA=d;renderAll();});
+
+function classifyDomain(dom){
+  if(!dom) return '其他';
+  if(/导航/.test(dom)) return '导航';
+  if(/灵巧|抓取|Grasp/.test(dom)) return '灵巧抓取';
+  if(/人形|人体|humanoid/i.test(dom)) return '人形机器人';
+  if(/VLA|基础模型|foundation/i.test(dom)) return 'VLA/基础模型';
+  if(/终身|记忆|离线|benchmark/i.test(dom)&&/仿真/.test(dom)) return '仿真基准';
+  if(/统一|增强|跨具身/.test(dom)) return '跨具身/统一';
+  if(/操作|OXE|manipulation/i.test(dom)) return '操作(Manipulation)';
+  return '其他';
+}
+function classifySource(src){
+  if(!src) return '未知';
+  if(/仿真/.test(src)&&/真实/.test(src)) return '混合';
+  if(/仿真/.test(src)) return '仿真';
+  return '真实采集';
+}
+
+function renderAll(){
+  renderStats();
+  renderTimeline();
+  renderSizeBubble();
+  renderDomain();
+  renderSource();
+  renderInstitution();
+  renderDataType();
+  renderAnnotation();
+  renderTop20();
+  renderTable();
+}
+
+function renderStats(){
+  const total=DATA.length;
+  const realCount=DATA.filter(d=>classifySource(d.data_source)==='真实采集').length;
+  const instSet=new Set();
+  DATA.forEach(d=>d.institution.split(/[+,;/]/).forEach(s=>{const n=s.trim();if(n.length>1)instSet.add(n);}));
+  const items=[
+    {n:total,l:'数据集总数',c:'var(--accent)'},
+    {n:realCount,l:'真机数据集',c:'var(--green)'},
+    {n:total-realCount,l:'仿真/混合',c:'#818cf8'},
+    {n:instSet.size,l:'涉及机构',c:'var(--orange)'},
+    {n:Math.round(realCount/total*100)+'%',l:'真机占比',c:'var(--pink)'},
+  ];
+  document.getElementById('stats').innerHTML=items.map(i=>`<div class="stat-card"><div class="num" style="color:${i.c}">${i.n}</div><div class="label">${i.l}</div></div>`).join('');
+}
+
+function renderTimeline(){
+  const yc={};DATA.forEach(d=>{const y=d.date?.slice(0,4);if(y&&y!=='')yc[y]=(yc[y]||0)+1;});
+  const labels=Object.keys(yc).sort();
+  new Chart(document.getElementById('c1'),{type:'bar',
+    data:{labels,datasets:[{label:'数据集数',data:labels.map(l=>yc[l]),backgroundColor:'rgba(99,102,241,0.7)',borderRadius:6}]},
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8b8fa3'},grid:{color:'#2a2d3a'}},y:{ticks:{color:'#8b8fa3',stepSize:2},grid:{color:'#2a2d3a'}}}}
+  });
+}
+
+function renderSizeBubble(){
+  const pts=DATA.filter(d=>d.size_gb&&parseFloat(d.size_gb)>0&&d.date).map(d=>{
+    const dom=classifyDomain(d.domain);
+    const domIdx=['操作(Manipulation)','仿真基准','灵巧抓取','人形机器人','导航','VLA/基础模型','跨具身/统一','其他'].indexOf(dom);
+    return{x:d.date,y:Math.log10(parseFloat(d.size_gb)+1),r:Math.min(Math.sqrt(parseFloat(d.size_gb))*0.8+3,30),label:d.name,bg:COLORS[domIdx>=0?domIdx:7]+'aa'};
+  });
+  new Chart(document.getElementById('c2'),{type:'bubble',
+    data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:p.r})),backgroundColor:pts.map(p=>p.bg),borderWidth:0}]},
+    options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:(_,{dataIndex:i})=>`${pts[i].label}: ${DATA.find(d=>d.name===pts[i].label)?.size_gb}GB`}}},
+      scales:{x:{type:'category',labels:[...new Set(pts.map(p=>p.x))].sort(),ticks:{color:'#8b8fa3'},grid:{color:'#2a2d3a'}},y:{title:{display:true,text:'log₁₀(GB)',color:'#8b8fa3'},ticks:{color:'#8b8fa3'},grid:{color:'#2a2d3a'}}}}
+  });
+}
+
+function renderDomain(){
+  const dc={};DATA.forEach(d=>{const dom=classifyDomain(d.domain);dc[dom]=(dc[dom]||0)+1;});
+  const entries=Object.entries(dc).sort((a,b)=>b[1]-a[1]);
+  new Chart(document.getElementById('c3'),{type:'doughnut',
+    data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:COLORS.slice(0,entries.length),borderWidth:0}]},
+    options:{responsive:true,plugins:{legend:{labels:{color:'#e1e4ea',font:{size:11}}}}}
+  });
+}
+
+function renderSource(){
+  const sc={};DATA.forEach(d=>{const s=classifySource(d.data_source);sc[s]=(sc[s]||0)+1;});
+  const labels=Object.keys(sc);
+  new Chart(document.getElementById('c4'),{type:'bar',
+    data:{labels,datasets:[{label:'数据集数',data:labels.map(l=>sc[l]),backgroundColor:['rgba(34,197,94,0.7)','rgba(99,102,241,0.7)','rgba(245,158,11,0.7)','rgba(139,92,246,0.7)'],borderRadius:6}]},
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8b8fa3'},grid:{color:'#2a2d3a'}},y:{ticks:{color:'#8b8fa3',stepSize:10},grid:{color:'#2a2d3a'}}}}
+  });
+}
+
+function renderInstitution(){
+  const ic={};
+  DATA.forEach(d=>d.institution.split(/[+,;/]/).forEach(s=>{const n=s.trim().replace(/\(.*\)/,'').trim();if(n.length>1)ic[n]=(ic[n]||0)+1;}));
+  const sorted=Object.entries(ic).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  new Chart(document.getElementById('c5'),{type:'bar',
+    data:{labels:sorted.map(s=>s[0].length>18?s[0].slice(0,18)+'…':s[0]),datasets:[{label:'贡献数',data:sorted.map(s=>s[1]),backgroundColor:COLORS,borderRadius:6}]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8b8fa3',stepSize:2},grid:{color:'#2a2d3a'}},y:{ticks:{color:'#8b8fa3',font:{size:11}},grid:{display:false}}}}
+  });
+}
+
+function renderDataType(){
+  const tc={'图片序列(RGB)':0,'RGB+Depth':0,'视频(MP4)':0,'点云/3D':0,'力矩/触觉':0,'运动序列':0,'多模态':0,'仿真环境':0,'其他':0};
+  DATA.forEach(d=>{
+    const t=d.data_type||'';
+    if(/仿真环境/.test(t)) tc['仿真环境']++;
+    else if(/力|触|Torque|tactile/i.test(t)) tc['力矩/触觉']++;
+    else if(/运动|SMPL|motion/i.test(t)) tc['运动序列']++;
+    else if(/点云|PointCloud|3D/i.test(t)) tc['点云/3D']++;
+    else if(/多模态|RGB.*Depth.*力|RGB.*触/i.test(t)||/音频/.test(t)) tc['多模态']++;
+    else if(/视频|MP4|video/i.test(t)) tc['视频(MP4)']++;
+    else if(/Depth|深度/.test(t)) tc['RGB+Depth']++;
+    else if(/图片|RGB|RLDS|HDF5|LeRobot|序列/i.test(t)) tc['图片序列(RGB)']++;
+    else tc['其他']++;
+  });
+  const entries=Object.entries(tc).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]);
+  new Chart(document.getElementById('c6'),{type:'polarArea',
+    data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:COLORS.map(c=>c+'99')}]},
+    options:{responsive:true,plugins:{legend:{labels:{color:'#e1e4ea',font:{size:11}}}},scales:{r:{ticks:{display:false},grid:{color:'#2a2d3a'}}}}
+  });
+}
+
+function renderAnnotation(){
+  let cap=0,capGT=0,act=0,actGT=0,cam=0,camGT=0,view=0,viewGT=0;
+  DATA.forEach(d=>{
+    if(d.caption){cap++;if(/GT|人工/.test(d.caption))capGT++;}
+    if(d.action){act++;if(/GT/.test(d.action))actGT++;}
+    if(d.camera_traj){cam++;if(/GT/.test(d.camera_traj))camGT++;}
+    if(d.view_angle){view++;if(d.view_angle)viewGT++;}
+  });
+  const N=DATA.length;
+  new Chart(document.getElementById('c7'),{type:'bar',
+    data:{labels:['Caption','Action','Camera Traj.','镜头视角'],
+      datasets:[
+        {label:'有标注(%)',data:[cap/N*100,act/N*100,cam/N*100,view/N*100].map(v=>+v.toFixed(1)),backgroundColor:'rgba(99,102,241,0.6)',borderRadius:4},
+        {label:'其中GT(%)',data:[capGT/N*100,actGT/N*100,camGT/N*100,0].map(v=>+v.toFixed(1)),backgroundColor:'rgba(34,197,94,0.6)',borderRadius:4},
+      ]},
+    options:{responsive:true,plugins:{legend:{labels:{color:'#e1e4ea'}}},scales:{x:{ticks:{color:'#8b8fa3'},grid:{color:'#2a2d3a'}},y:{ticks:{color:'#8b8fa3',callback:v=>v+'%'},grid:{color:'#2a2d3a'}}}}
+  });
+}
+
+function renderTop20(){
+  const sorted=DATA.filter(d=>d.size_gb&&parseFloat(d.size_gb)>0).sort((a,b)=>parseFloat(b.size_gb)-parseFloat(a.size_gb)).slice(0,20);
+  new Chart(document.getElementById('c8'),{type:'bar',
+    data:{labels:sorted.map(d=>d.name.length>22?d.name.slice(0,22)+'…':d.name),
+      datasets:[{label:'GB',data:sorted.map(d=>parseFloat(d.size_gb)),backgroundColor:COLORS.concat(COLORS).slice(0,20),borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{type:'logarithmic',ticks:{color:'#8b8fa3'},grid:{color:'#2a2d3a'},title:{display:true,text:'File Size (GB, log scale)',color:'#8b8fa3'}},
+              y:{ticks:{color:'#8b8fa3',font:{size:10}},grid:{display:false}}}}
+  });
+}
+
+function renderTable(){
+  const cols=[{k:'name',l:'数据集'},{k:'date',l:'日期'},{k:'size_gb',l:'Size(GB)'},{k:'institution',l:'机构'},{k:'domain',l:'Domain'},{k:'data_source',l:'来源'},{k:'count',l:'数据量'},{k:'duration',l:'时长'},{k:'conclusion',l:'结论'}];
+  const thead=document.querySelector('#dataTable thead');
+  thead.innerHTML='<tr>'+cols.map(c=>`<th onclick="sortTable('${c.k}')">${c.l}</th>`).join('')+'</tr>';
+
+  const cats=['全部','操作','仿真','真实采集','2024+','人形/导航'];
+  document.getElementById('filters').innerHTML=cats.map((c,i)=>`<button class="filter-btn ${i===0?'active':''}" onclick="filterTable('${c}',this)">${c}</button>`).join('');
+
+  window.currentSort={key:'',asc:true};
+  window.sortTable=function(key){
+    if(currentSort.key===key) currentSort.asc=!currentSort.asc;
+    else{currentSort.key=key;currentSort.asc=true;}
+    filterTable(document.querySelector('.filter-btn.active')?.textContent||'全部',document.querySelector('.filter-btn.active'));
+  };
+  window.filterTable=function(cat,btn){
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    if(btn)btn.classList.add('active');
+    let filtered=DATA;
+    if(cat==='操作') filtered=DATA.filter(d=>/操作|OXE/.test(d.domain));
+    else if(cat==='仿真') filtered=DATA.filter(d=>/仿真/.test(d.data_source));
+    else if(cat==='真实采集') filtered=DATA.filter(d=>/真实|Human/.test(d.data_source));
+    else if(cat==='2024+') filtered=DATA.filter(d=>parseInt(d.date)>=2024);
+    else if(cat==='人形/导航') filtered=DATA.filter(d=>/人形|导航|humanoid|人体/i.test(d.domain));
+    if(currentSort.key){
+      filtered=[...filtered].sort((a,b)=>{
+        let va=a[currentSort.key]||'',vb=b[currentSort.key]||'';
+        const na=parseFloat(va),nb=parseFloat(vb);
+        if(!isNaN(na)&&!isNaN(nb)) return currentSort.asc?na-nb:nb-na;
+        return currentSort.asc?va.localeCompare(vb):vb.localeCompare(va);
+      });
+    }
+    const tbody=document.querySelector('#dataTable tbody');
+    tbody.innerHTML=filtered.map(d=>{
+      const srcTag=classifySource(d.data_source)==='真实采集'?'<span class="tag tag-real">真机</span>':(classifySource(d.data_source)==='仿真'?'<span class="tag tag-sim">仿真</span>':'<span class="tag tag-mix">混合</span>');
+      return `<tr><td><strong>${d.name}</strong></td><td>${d.date}</td><td>${d.size_gb||'-'}</td><td>${d.institution?.slice(0,25)||''}</td><td>${classifyDomain(d.domain)}</td><td>${srcTag}</td><td>${(d.count||'').slice(0,30)}</td><td>${(d.duration||'-').slice(0,15)}</td><td>${(d.conclusion||'').slice(0,45)}</td></tr>`;
+    }).join('');
+  };
+  filterTable('全部',document.querySelector('.filter-btn'));
+}
+</script>
+</body>
+</html>
